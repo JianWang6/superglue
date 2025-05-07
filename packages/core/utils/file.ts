@@ -201,6 +201,39 @@ export async function parseXML(buffer: Buffer): Promise<any> {
             currentElement = text.trim();
         }
     });
+    
+    parser.on('cdata', async (cdata) => {
+        if (!currentElement || !cdata?.trim()) {
+            return;
+        }
+        
+        try {
+            // First try to parse as XML
+            const parsedXml = await parseXML(Buffer.from(cdata.trim()));
+            if(Object.keys(currentElement)?.length > 0) {
+                currentElement["__cdata"] = parsedXml;
+            } else {
+                currentElement = parsedXml;
+            }
+        } catch (xmlError) {
+            try {
+                // If XML parsing fails, try JSON parsing
+                const parsedJson = JSON.parse(cdata.trim());
+                if(Object.keys(currentElement)?.length > 0) {
+                    currentElement["__cdata"] = parsedJson;
+                } else {
+                    currentElement = parsedJson;
+                }
+            } catch (jsonError) {
+                // If both XML and JSON parsing fail, handle as plain text
+                if(Object.keys(currentElement)?.length > 0) {
+                    currentElement["__cdata"] = cdata.trim();
+                } else {
+                    currentElement = cdata.trim();
+                }
+            }
+        }
+    });
 
     parser.on('closetag', (tagName) => {
         let parentElement = elementStack.pop();
