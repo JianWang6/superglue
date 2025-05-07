@@ -174,6 +174,9 @@ const ApiConfigForm = ({ id }: { id?: string }) => {
         + '-' + Math.floor(1000 + Math.random() * 9000);
     }
 
+    formData.id = formData.id.replace(/[^a-zA-Z0-9-_]/g, ''); // Remove special characters
+    
+
     try {
       const payload = {
         id: formData.id,
