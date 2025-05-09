@@ -304,6 +304,10 @@ const ConfigTable = () => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align='end'>
+              <DropdownMenuItem onClick={handleCreateNew} className='p-4'>
+                <Globe className="mr-2 h-4 w-4" />
+                API Configuration
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={handleWorkflow} className='p-4'>
                 <GitBranch className="mr-2 h-4 w-4" />
                 Workflow
