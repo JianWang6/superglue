@@ -45,7 +45,7 @@ export const executeWorkflowResolver = async (
     runId = crypto.randomUUID();
     metadata = { orgId: context.orgId, runId: runId };
     const executor = new WorkflowExecutor(workflow, metadata);
-    const result = await executor.execute(args.payload, args.credentials, args.options);
+    const result = await executor.execute(args.payload, args.credentials, args.options, context.datastore, context.orgId);
     return result;
   } catch (error) {
     logMessage('error', "Workflow execution error: " + String(error), metadata || { orgId: context.orgId, runId });

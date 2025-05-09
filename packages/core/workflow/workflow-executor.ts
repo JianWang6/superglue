@@ -35,6 +35,8 @@ export class WorkflowExecutor implements Workflow {
     payload: Record<string, any>,
     credentials: Record<string, string>,
     options?: RequestOptions,
+    datastore?: import("@superglue/shared").DataStore,
+    orgId?: string
   ): Promise<WorkflowResult> {
     this.result = {
       success: true,
@@ -49,6 +51,17 @@ export class WorkflowExecutor implements Workflow {
 
       // Execute each step in order
       for (const step of this.steps) {
+        // 新增：如有datastore和apiConfig.id，查库并赋值
+        if (datastore && step.apiConfig?.id) {
+          try {
+            const configFromDb = await datastore.getApiConfig(step.apiConfig.id, orgId);
+            if (configFromDb) {
+              step.apiConfig = configFromDb;
+            }
+          } catch (err) {
+            logMessage("error", `Failed to fetch ApiConfig for step ${step.id}: ${err}`);
+          }
+        }
         let stepResult: WorkflowStepResult;
         try {
           const strategy = selectStrategy(step);
