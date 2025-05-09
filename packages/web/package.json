@@ -5,7 +5,7 @@
     "scripts": {
         "dev": "next dev --turbopack --port 3001",
         "build": "next build",
-        "start": "next start -p $WEB_PORT",
+        "start": "next start -p 3001",
         "lint": "next lint"
     },
     "dependencies": {
@@ -54,7 +54,7 @@
         "dotenv-cli": "^8.0.0",
         "postcss": "^8.5.3",
         "tailwindcss": "^3.4.17",
-        "typescript": "^5.7.3"
+        "typescript": "5.8.3"
     },
     "overrides": {
         "pdfjs-dist": {

@@ -23,7 +23,7 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "start": "node dist/index.js",
+    "start": "node -r dotenv/config dist/index.js dotenv_config_path=../../.env",
     "dev": "npm run build && node -r dotenv/config ./dist/index.js dotenv_config_path=../../.env",
     "test": "vitest",
     "test-no-watch": "vitest run",
