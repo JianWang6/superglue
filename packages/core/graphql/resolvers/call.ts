@@ -27,7 +27,7 @@ export async function executeApiCall(
   let messages: OpenAI.Chat.ChatCompletionMessageParam[] = [];
   let documentation: Documentation;
   let success = false;
-  const MaxRetries = process.env.MAX_RETRIES ? parseInt(process.env.MAX_RETRIES) : 3;
+  const MaxRetries = process.env.MAX_RETRIES ? parseInt(process.env.MAX_RETRIES) : 0;
   do {
     try {
       if(retryCount > 0) {

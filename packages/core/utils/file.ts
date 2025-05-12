@@ -178,27 +178,38 @@ export async function parseXML(buffer: Buffer): Promise<any> {
         if (currentElement) {
             elementStack.push(currentElement); // Push current to stack
         }
-
+        
         // Update current element
         currentElement = newElement;
     });
 
-    parser.on('text', (text) => {
+    parser.on('text', async (text) => {
         if (!currentElement || text?.trim()?.length == 0) {
             return;
         }
-        
-        if(Object.keys(currentElement)?.length > 0) {
-            currentElement["__text"] = text.trim();
-        }
-        else if(Array.isArray(currentElement)) {
-            currentElement.push(text.trim());
-        }
-        else if(typeof currentElement === "string") {
-            currentElement = [currentElement, text.trim()];
-        }
-        else {
-            currentElement = text.trim();
+        const trimmed = text.trim();
+        if (trimmed.startsWith('<')) {
+            // If text looks like XML, try to parse as XML
+            try {
+                const parsedXml = await parseXML(Buffer.from(trimmed));
+                if (Object.keys(currentElement)?.length > 0) {
+                    currentElement["__cdata"] = parsedXml;
+                } else {
+                    currentElement = parsedXml;
+                }
+            } catch (xmlError) {
+                if (Object.keys(currentElement)?.length > 0) {
+                    currentElement["__cdata"] = trimmed;
+                } else {
+                    currentElement = trimmed;
+                }
+            }
+        } else {
+            if (Object.keys(currentElement)?.length > 0) {
+                currentElement["__cdata"] = trimmed;
+            } else {
+                currentElement = trimmed;
+            }
         }
     });
     
