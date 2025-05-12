@@ -27,6 +27,7 @@ export async function executeApiCall(
   let messages: OpenAI.Chat.ChatCompletionMessageParam[] = [];
   let documentation: Documentation;
   let success = false;
+  const MaxRetries = process.env.MAX_RETRIES ? parseInt(process.env.MAX_RETRIES) : 3;
   do {
     try {
       if(retryCount > 0) {
@@ -42,7 +43,7 @@ export async function executeApiCall(
 
       response = await callEndpoint(endpoint, payload, credentials, options);
 
-      if (!response.data) {
+      if (!response.data || Object.keys(response.data).length === 0) {
         throw new Error("No data returned from API. This could be due to a configuration error.");
       }
       // Check if response is valid
@@ -71,7 +72,7 @@ export async function executeApiCall(
       }
     }
     retryCount++;
-  } while (retryCount < 8);
+  } while (retryCount < MaxRetries);
 
   if (!success) {
     telemetryClient?.captureException(new Error(`API call failed after ${retryCount} retries. Last error: ${lastError}`), metadata.orgId, {
