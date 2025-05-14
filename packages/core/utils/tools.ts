@@ -4,6 +4,7 @@ import { GraphQLResolveInfo } from "graphql";
 import jsonata from "jsonata";
 import { Validator } from "jsonschema";
 import { toJsonSchema } from "../external/json-schema.js";
+import { logMessage } from "./logs.js";
 
 export function isRequested(field: string, info: GraphQLResolveInfo) {
     return info.fieldNodes.some(
@@ -26,6 +27,7 @@ export async function applyJsonata(data: any, expr: string): Promise<any> {
     const result = await expression.evaluate(data);
     return result;
   } catch (error) {
+    logMessage("error", `JSONata transformation failed: ${error.message}`);
     throw new Error(`JSONata transformation failed: ${error.message} at ${expr.substring(error.position - 10, error.position + 10)}`);
   }
 }
