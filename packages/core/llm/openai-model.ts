@@ -93,7 +93,7 @@ export class OpenAIModel implements LLM {
           temperature: temperature,
           response_format: responseFormat as any,
         });
-        let responseText = result.choices[0].message.content;
+        let responseText = result.choices[0].message.content || (result.choices[0].message as any).reasoning_content;
 
         let generatedObject = JSON.parse(responseText);
         if (generatedObject.___results) {

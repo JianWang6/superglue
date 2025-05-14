@@ -67,7 +67,7 @@ export class WorkflowBuilder {
       steps: z.array(z.object({
         stepId: z.string().describe("Unique camelCase identifier for the step (e.g., 'fetchCustomerDetails', 'updateOrderStatus')."),
         systemId: z.string().describe("The ID of the system (from the provided list) to use for this step."),
-        instruction: z.string().describe("A specific, concise instruction for what this single API call should achieve (e.g., 'Get user profile by email', 'Create a new order')."),
+        instruction: z.string().describe("A specific, concise instruction for what this single API call should achieve (e.g., 'Get user profile by email', 'Create a new order'). May be can describe the API call in detail. like soapAction header information."),
         mode: z.enum(["DIRECT", "LOOP"]).describe("The mode of execution for this step. Use 'DIRECT' for simple calls executed once or 'LOOP' for iterative processes."),
         loopSelector: z.string().describe("If mode is loop: The JSONata expression to use for selecting the next iteration of a loop. Use '$' if no selection is needed."),
         urlHost: z.string().describe("The host of the API to use for this step. Mostly this will be the same as the system's urlHost."),
@@ -153,7 +153,7 @@ Output a JSON object conforming to the WorkflowPlan schema. Define the necessary
         instruction: plannedStep.instruction,
         urlHost: plannedStep.urlHost,
         urlPath: plannedStep.urlPath,
-        documentationUrl: system.documentationUrl
+        documentationUrl: system.documentationUrl || system.documentation,
       };
       const executionStep: ExecutionStep = {
         id: plannedStep.stepId,
