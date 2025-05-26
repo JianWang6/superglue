@@ -15,17 +15,20 @@ import { SuperglueClient } from "@superglue/client";
 import { parseCredentialsHelper, removeNullUndefined } from "@/src/lib/client-utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { Badge } from "../ui/badge";
-import { Trash2, ChevronDown, ChevronUp, RotateCw } from "lucide-react";
+import { Switch } from "../ui/switch";
+import { Trash2, ChevronDown, ChevronUp, RotateCw, EyeOff, Eye } from "lucide-react";
 
 // StepCard component for individual step display and editing
 interface StepCardProps {
   step: any;
   index: number;
+  isHidden: boolean;
   onUpdate: (step: any) => void;
   onDelete: () => void;
+  onToggleHidden: (hidden: boolean) => void;
 }
 
-function StepCard({ step, index, onUpdate, onDelete }: StepCardProps) {
+function StepCard({ step, index, isHidden, onUpdate, onDelete, onToggleHidden }: StepCardProps) {
   const [isExpanded, setIsExpanded] = useState(true); // 默认展开
   const config = useConfig(); // Added to access Superglue client
   const [apiConfigs, setApiConfigs] = useState<ApiConfig[]>([]); // Added to store API configs
@@ -64,9 +67,8 @@ function StepCard({ step, index, onUpdate, onDelete }: StepCardProps) {
     
     current[keys[keys.length - 1]] = value;
     onUpdate(updated);
-  };
-  return (
-    <Card className="border-l-4 border-l-primary/30 shadow-sm">
+  };  return (
+    <Card className={`border-l-4 ${isHidden ? 'border-l-gray-300 bg-gray-50/50' : 'border-l-primary/30'} shadow-sm ${isHidden ? 'opacity-60' : ''}`}>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -79,9 +81,23 @@ function StepCard({ step, index, onUpdate, onDelete }: StepCardProps) {
                 LOOP
               </Badge>
             )}
+            {isHidden && (
+              <Badge variant="secondary" className="text-xs bg-gray-200 text-gray-600">
+                <EyeOff className="w-3 h-3 mr-1" />
+                隐藏
+              </Badge>
+            )}
             <span className="font-mono text-sm font-medium text-primary">{step.id}</span>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
+              <Label className="text-xs text-muted-foreground">参与执行</Label>
+              <Switch
+                checked={!isHidden}
+                onCheckedChange={(checked) => onToggleHidden(!checked)}
+                className="scale-75"
+              />
+            </div>
             <Button
               variant="ghost"
               size="sm"
@@ -296,11 +312,11 @@ export default function WorkflowPlayground({ id }: { id?: string }) {
   "result": $
 }`);
   const [credentials, setCredentials] = useState("");
-  const [payload, setPayload] = useState("{}");
-  const [loading, setLoading] = useState(false);
+  const [payload, setPayload] = useState("{}");  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [result, setResult] = useState(null);
   const [activeResultTab, setActiveResultTab] = useState("finalData");
+  const [hiddenSteps, setHiddenSteps] = useState<Set<number>>(new Set());
   
   const updateWorkflowId = (id: string) => {
     const sanitizedId = id
@@ -320,10 +336,10 @@ export default function WorkflowPlayground({ id }: { id?: string }) {
         apiKey: config.superglueApiKey,
       });
       const workflow = await superglueClient.getWorkflow(idToLoad);
-      if (!workflow) {
-        updateWorkflowId('');
+      if (!workflow) {        updateWorkflowId('');
         setStepsText('');
         setFinalTransform('');
+        setHiddenSteps(new Set()); // 重置隐藏状态
         throw new Error(`Workflow with ID "${idToLoad}" not found.`);
       }
       // Recursively remove null/undefined values from the entire workflow object
@@ -331,11 +347,10 @@ export default function WorkflowPlayground({ id }: { id?: string }) {
 
       // Extract potentially cleaned steps and finalTransform
       const cleanedSteps = cleanedWorkflow.steps || []; // Default to empty array if steps were removed
-      const cleanedFinalTransform = cleanedWorkflow.finalTransform || `{\n  "result": $\n}`; // Default transform
-
-      updateWorkflowId(cleanedWorkflow.id || ''); // Use cleaned ID, default to empty string
+      const cleanedFinalTransform = cleanedWorkflow.finalTransform || `{\n  "result": $\n}`; // Default transform      updateWorkflowId(cleanedWorkflow.id || ''); // Use cleaned ID, default to empty string
       setStepsText(JSON.stringify(cleanedSteps, null, 2));
       setFinalTransform(cleanedFinalTransform);
+      setHiddenSteps(new Set()); // 重置隐藏状态
 
       toast({
         title: "Workflow loaded",
@@ -347,10 +362,10 @@ export default function WorkflowPlayground({ id }: { id?: string }) {
         title: "Error loading workflow",
         description: error.message,
         variant: "destructive",
-      });
-      updateWorkflowId('');
+      });      updateWorkflowId('');
       setStepsText('');
       setFinalTransform('');
+      setHiddenSteps(new Set()); // 重置隐藏状态
     } finally {
       setLoading(false);
     }
@@ -397,10 +412,10 @@ export default function WorkflowPlayground({ id }: { id?: string }) {
         null,
         2,
       ),
-    );
-    setFinalTransform(`$.getBreedImage.(
+    );    setFinalTransform(`$.getBreedImage.(
   {"breed": loopValue, "image": message}
 )`);
+    setHiddenSteps(new Set()); // 重置隐藏状态
 
     toast({
       title: "Example loaded",
@@ -457,17 +472,29 @@ export default function WorkflowPlayground({ id }: { id?: string }) {
       setSaving(false);
     }
   };
-
   const executeWorkflow = async () => {
     try {
       setLoading(true);
-      const steps = JSON.parse(stepsText);
+      const allSteps = JSON.parse(stepsText);
+      // 过滤掉隐藏的步骤
+      const activeSteps = allSteps.filter((_: any, index: number) => !hiddenSteps.has(index));
+      
+      if (activeSteps.length === 0) {
+        toast({
+          title: "无法执行工作流",
+          description: "没有激活的步骤可以执行，请确保至少有一个步骤是显示状态",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
       if (!workflowId) {
         updateWorkflowId(`wf-${Date.now()}`);
       }
       const workflowInput = {
         id: workflowId,
-        steps: steps.map((step: ExecutionStep) => ({
+        steps: activeSteps.map((step: ExecutionStep) => ({
           ...step,
           apiConfig: {
             id: step.apiConfig.id || step.id,
@@ -575,13 +602,14 @@ export default function WorkflowPlayground({ id }: { id?: string }) {
 
             {/* Steps and Final Transform */}
             <div className="space-y-3 flex flex-col flex-grow">
-              <div className="flex-1 flex flex-col min-h-0">                <div className="flex items-center justify-between mb-2">
-                  <Label className="block">
+              <div className="flex-1 flex flex-col min-h-0">                <div className="flex items-center justify-between mb-2">                  <Label className="block">
                     Workflow Steps ({(() => {
                       try {
-                        return JSON.parse(stepsText || "[]").length;
+                        const allSteps = JSON.parse(stepsText || "[]");
+                        const activeSteps = allSteps.filter((_: any, index: number) => !hiddenSteps.has(index));
+                        return `${activeSteps.length}/${allSteps.length} 激活`;
                       } catch {
-                        return 0;
+                        return "0/0 激活";
                       }
                     })()})
                   </Label>
@@ -608,8 +636,7 @@ export default function WorkflowPlayground({ id }: { id?: string }) {
                     </Button>
                     <Button
                       variant="outline"
-                      size="sm"
-                      onClick={() => {
+                      size="sm"                      onClick={() => {
                         try {
                           const steps = JSON.parse(stepsText || "[]");
                           const newStep = {
@@ -625,6 +652,7 @@ export default function WorkflowPlayground({ id }: { id?: string }) {
                             responseMapping: "$"
                           };
                           setStepsText(JSON.stringify([...steps, newStep], null, 2));
+                          // 新步骤默认不隐藏，不需要更新隐藏状态
                         } catch {
                           setStepsText(JSON.stringify([{
                             id: "step1",
@@ -638,6 +666,7 @@ export default function WorkflowPlayground({ id }: { id?: string }) {
                             inputMapping: "$",
                             responseMapping: "$"
                           }], null, 2));
+                          setHiddenSteps(new Set()); // 重置隐藏状态
                         }
                       }}
                     >
@@ -656,12 +685,12 @@ export default function WorkflowPlayground({ id }: { id?: string }) {
                             <p className="text-sm">Click "Add Step" to get started.</p>
                           </div>
                         );
-                      }
-                      return steps.map((step: any, index: number) => (
+                      }                      return steps.map((step: any, index: number) => (
                         <StepCard
                           key={index}
                           step={step}
                           index={index}
+                          isHidden={hiddenSteps.has(index)}
                           onUpdate={(updatedStep) => {
                             const updatedSteps = [...steps];
                             updatedSteps[index] = updatedStep;
@@ -670,6 +699,25 @@ export default function WorkflowPlayground({ id }: { id?: string }) {
                           onDelete={() => {
                             const updatedSteps = steps.filter((_: any, i: number) => i !== index);
                             setStepsText(JSON.stringify(updatedSteps, null, 2));
+                            // 更新隐藏步骤的索引
+                            const newHiddenSteps = new Set<number>();
+                            hiddenSteps.forEach((hiddenIndex) => {
+                              if (hiddenIndex < index) {
+                                newHiddenSteps.add(hiddenIndex);
+                              } else if (hiddenIndex > index) {
+                                newHiddenSteps.add(hiddenIndex - 1);
+                              }
+                            });
+                            setHiddenSteps(newHiddenSteps);
+                          }}
+                          onToggleHidden={(hidden) => {
+                            const newHiddenSteps = new Set(hiddenSteps);
+                            if (hidden) {
+                              newHiddenSteps.add(index);
+                            } else {
+                              newHiddenSteps.delete(index);
+                            }
+                            setHiddenSteps(newHiddenSteps);
                           }}
                         />
                       ));
@@ -681,7 +729,10 @@ export default function WorkflowPlayground({ id }: { id?: string }) {
                             variant="outline"
                             size="sm"
                             className="mt-2"
-                            onClick={() => setStepsText("[]")}
+                            onClick={() => {
+                              setStepsText("[]");
+                              setHiddenSteps(new Set()); // 重置隐藏状态
+                            }}
                           >
                             Reset Steps
                           </Button>
