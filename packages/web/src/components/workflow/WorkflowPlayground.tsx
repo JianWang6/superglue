@@ -10,9 +10,281 @@ import { useToast } from "../../hooks/use-toast";
 import { useConfig } from "@/src/app/config-context";
 import { useSearchParams, useRouter } from 'next/navigation';
 import { HelpTooltip } from '@/src/components/utils/HelpTooltip';
-import { ExecutionStep } from "@superglue/client";
+import { ExecutionStep, ApiConfig } from "@superglue/client"; // Added ApiConfig
 import { SuperglueClient } from "@superglue/client";
 import { parseCredentialsHelper, removeNullUndefined } from "@/src/lib/client-utils";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import { Badge } from "../ui/badge";
+import { Trash2, ChevronDown, ChevronUp, RotateCw } from "lucide-react";
+
+// StepCard component for individual step display and editing
+interface StepCardProps {
+  step: any;
+  index: number;
+  onUpdate: (step: any) => void;
+  onDelete: () => void;
+}
+
+function StepCard({ step, index, onUpdate, onDelete }: StepCardProps) {
+  const [isExpanded, setIsExpanded] = useState(true); // 默认展开
+  const config = useConfig(); // Added to access Superglue client
+  const [apiConfigs, setApiConfigs] = useState<ApiConfig[]>([]); // Added to store API configs
+  const { toast } = useToast(); // Added for showing toasts
+
+  useEffect(() => {
+    const fetchApiConfigs = async () => {
+      try {
+        const superglueClient = new SuperglueClient({
+          endpoint: config.superglueEndpoint,
+          apiKey: config.superglueApiKey,
+        });
+        const result = await superglueClient.listApis();
+        setApiConfigs(result.items || []);
+      } catch (error: any) {
+        console.error("Error fetching API configs:", error);
+        toast({
+          title: "Error fetching API configs",
+          description: error.message,
+          variant: "destructive",
+        });
+      }
+    };
+    fetchApiConfigs();
+  }, [config, toast]);
+  
+  const updateField = (path: string, value: any) => {
+    const keys = path.split('.');
+    const updated = JSON.parse(JSON.stringify(step));
+    let current = updated;
+    
+    for (let i = 0; i < keys.length - 1; i++) {
+      if (!current[keys[i]]) current[keys[i]] = {};
+      current = current[keys[i]];
+    }
+    
+    current[keys[keys.length - 1]] = value;
+    onUpdate(updated);
+  };
+  return (
+    <Card className="border-l-4 border-l-primary/30 shadow-sm">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Badge variant="outline" className="text-xs font-mono">
+              {index + 1}
+            </Badge>
+            {step.executionMode === 'LOOP' && (
+              <Badge variant="secondary" className="text-xs">
+                <RotateCw className="w-3 h-3 mr-1" />
+                LOOP
+              </Badge>
+            )}
+            <span className="font-mono text-sm font-medium text-primary">{step.id}</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="h-8 w-8 p-0"
+            >
+              {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onDelete}
+              className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+        <div className="text-sm text-muted-foreground bg-muted/50 px-3 py-2 rounded font-mono">
+          {step.apiConfig?.method || 'GET'} {step.apiConfig?.urlHost}{step.apiConfig?.urlPath}
+        </div>
+        {step.apiConfig?.instruction && (
+          <div className="text-sm text-foreground/80 italic">
+            "{step.apiConfig.instruction}"
+          </div>
+        )}
+      </CardHeader>
+        {isExpanded && (
+        <CardContent className="pt-0 space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs font-medium">Step ID</Label>
+              <Input
+                value={step.id || ''}
+                onChange={(e) => updateField('id', e.target.value)}
+                className="text-xs h-8"
+                placeholder="step1"
+              />
+            </div>
+            <div>
+              <Label className="text-xs font-medium">Execution Mode</Label>
+              <Select
+                value={step.executionMode || 'DIRECT'}
+                onValueChange={(value) => updateField('executionMode', value)}
+              >
+                <SelectTrigger className="text-xs h-8">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="DIRECT">DIRECT</SelectItem>
+                  <SelectItem value="LOOP">LOOP</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="space-y-3 p-3 bg-muted/30 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                <Label className="text-sm font-semibold">API Configuration</Label>
+              </div>
+              <Select
+                onValueChange={(apiId) => {
+                  const selectedConfig = apiConfigs.find(ac => ac.id === apiId);
+                  if (selectedConfig) {
+                    onUpdate({ 
+                      ...step, 
+                      apiConfig: { 
+                        ...step.apiConfig, 
+                        // Keep existing id and instruction if user wants to override
+                        // id: selectedConfig.id, 
+                        urlHost: selectedConfig.urlHost, 
+                        urlPath: selectedConfig.urlPath, 
+                        method: selectedConfig.method, 
+                        // instruction: selectedConfig.instruction 
+                      } 
+                    });
+                  }
+                }}
+              >
+                <SelectTrigger className="text-xs h-8 w-[200px]">
+                  <SelectValue placeholder="Load from existing API Config" />
+                </SelectTrigger>
+                <SelectContent>
+                  {apiConfigs.map((api) => (
+                    <SelectItem key={api.id} value={api.id}>
+                      {api.id} ({api.method} {api.urlHost}{api.urlPath})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <div>
+                <Label className="text-xs">Method</Label>
+                <Select
+                  value={step.apiConfig?.method || 'GET'}
+                  onValueChange={(value) => updateField('apiConfig.method', value)}
+                >
+                  <SelectTrigger className="text-xs h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="GET">GET</SelectItem>
+                    <SelectItem value="POST">POST</SelectItem>
+                    <SelectItem value="PUT">PUT</SelectItem>
+                    <SelectItem value="DELETE">DELETE</SelectItem>
+                    <SelectItem value="PATCH">PATCH</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="col-span-2">
+                <Label className="text-xs">Host</Label>
+                <Input
+                  value={step.apiConfig?.urlHost || ''}
+                  onChange={(e) => updateField('apiConfig.urlHost', e.target.value)}
+                  className="text-xs h-8"
+                  placeholder="https://api.example.com"
+                />
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs">Path</Label>
+              <Input
+                value={step.apiConfig?.urlPath || ''}
+                onChange={(e) => updateField('apiConfig.urlPath', e.target.value)}
+                className="text-xs h-8"
+                placeholder="/endpoint"
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Instruction</Label>
+              <Input
+                value={step.apiConfig?.instruction || ''}
+                onChange={(e) => updateField('apiConfig.instruction', e.target.value)}
+                className="text-xs h-8"
+                placeholder="Describe what this API call does"
+              />
+            </div>
+          </div>
+
+          {step.executionMode === 'LOOP' && (
+            <div className="space-y-2 p-3 bg-muted border border-amber-200 rounded-lg">
+              <div className="flex items-center gap-2">
+                <RotateCw className="w-4 h-4 text-amber-600" />
+                <Label className="text-sm font-semibold text-amber-800">Loop Configuration</Label>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs">Loop Selector</Label>
+                  <Input
+                    value={step.loopSelector || ''}
+                    onChange={(e) => updateField('loopSelector', e.target.value)}
+                    className="text-xs h-8"
+                    placeholder="e.g., getAllBreeds"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Max Iterations</Label>
+                  <Input
+                    type="number"
+                    value={step.loopMaxIters || ''}
+                    onChange={(e) => updateField('loopMaxIters', parseInt(e.target.value) || undefined)}
+                    className="text-xs h-8"
+                    placeholder="∞"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-3 p-3 bg-muted border border-green-200 rounded-lg">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <Label className="text-sm font-semibold text-green-800">Data Transformation</Label>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">Input Mapping (JSONata)</Label>
+                <Textarea
+                  value={step.inputMapping || '$'}
+                  onChange={(e) => updateField('inputMapping', e.target.value)}
+                  className="font-mono text-xs h-16 resize-none"
+                  placeholder="$"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Response Mapping (JSONata)</Label>
+                <Textarea
+                  value={step.responseMapping || '$'}
+                  onChange={(e) => updateField('responseMapping', e.target.value)}
+                  className="font-mono text-xs h-16 resize-none"
+                  placeholder="$"
+                />
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      )}
+    </Card>
+  );
+}
 
 export default function WorkflowPlayground({ id }: { id?: string }) {
   const router = useRouter();
@@ -303,17 +575,121 @@ export default function WorkflowPlayground({ id }: { id?: string }) {
 
             {/* Steps and Final Transform */}
             <div className="space-y-3 flex flex-col flex-grow">
-              <div className="flex-1 flex flex-col min-h-0">
-                <Label htmlFor="steps" className="mb-1 block">
-                  Steps (JSON)
-                </Label>
-                <Textarea
-                  id="steps"
-                  value={stepsText}
-                  onChange={(e) => setStepsText(e.target.value)}
-                  placeholder="Enter workflow steps as JSON array"
-                  className="font-mono resize-none flex-1 min-h-[250px] overflow-auto w-full text-xs"
-                />
+              <div className="flex-1 flex flex-col min-h-0">                <div className="flex items-center justify-between mb-2">
+                  <Label className="block">
+                    Workflow Steps ({(() => {
+                      try {
+                        return JSON.parse(stepsText || "[]").length;
+                      } catch {
+                        return 0;
+                      }
+                    })()})
+                  </Label>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const modal = document.createElement('div');
+                        modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+                        modal.innerHTML = `
+                          <div class="bg-muted  rounded-lg p-6 max-w-4xl max-h-[80vh] overflow-auto">
+                            <div class="flex justify-between items-center mb-4">
+                              <h3 class="text-lg font-semibold">Steps JSON</h3>
+                              <button class="text-gray-500 hover:text-gray-700" onclick="this.closest('.fixed').remove()">✕</button>
+                            </div>
+                            <pre class="bg-muted p-4 rounded text-sm overflow-auto font-mono">${JSON.stringify(JSON.parse(stepsText || "[]"), null, 2)}</pre>
+                          </div>
+                        `;
+                        document.body.appendChild(modal);
+                      }}
+                    >
+                      View JSON
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        try {
+                          const steps = JSON.parse(stepsText || "[]");
+                          const newStep = {
+                            id: `step${steps.length + 1}`,
+                            apiConfig: {
+                              urlPath: "",
+                              instruction: "",
+                              urlHost: "",
+                              method: "GET"
+                            },
+                            executionMode: "DIRECT",
+                            inputMapping: "$",
+                            responseMapping: "$"
+                          };
+                          setStepsText(JSON.stringify([...steps, newStep], null, 2));
+                        } catch {
+                          setStepsText(JSON.stringify([{
+                            id: "step1",
+                            apiConfig: {
+                              urlPath: "",
+                              instruction: "",
+                              urlHost: "",
+                              method: "GET"
+                            },
+                            executionMode: "DIRECT",
+                            inputMapping: "$",
+                            responseMapping: "$"
+                          }], null, 2));
+                        }
+                      }}
+                    >
+                      Add Step
+                    </Button>
+                  </div>
+                </div>
+                <div className="flex-1 overflow-auto space-y-3 pr-2">
+                  {(() => {
+                    try {
+                      const steps = JSON.parse(stepsText || "[]");
+                      if (steps.length === 0) {
+                        return (
+                          <div className="text-center py-8 text-muted-foreground">
+                            <p>No steps defined yet.</p>
+                            <p className="text-sm">Click "Add Step" to get started.</p>
+                          </div>
+                        );
+                      }
+                      return steps.map((step: any, index: number) => (
+                        <StepCard
+                          key={index}
+                          step={step}
+                          index={index}
+                          onUpdate={(updatedStep) => {
+                            const updatedSteps = [...steps];
+                            updatedSteps[index] = updatedStep;
+                            setStepsText(JSON.stringify(updatedSteps, null, 2));
+                          }}
+                          onDelete={() => {
+                            const updatedSteps = steps.filter((_: any, i: number) => i !== index);
+                            setStepsText(JSON.stringify(updatedSteps, null, 2));
+                          }}
+                        />
+                      ));
+                    } catch {
+                      return (
+                        <div className="p-4 border border-destructive rounded-md">
+                          <p className="text-destructive text-sm">Invalid JSON format in steps</p>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="mt-2"
+                            onClick={() => setStepsText("[]")}
+                          >
+                            Reset Steps
+                          </Button>
+                        </div>
+                      );
+                    }
+                  })()}
+                </div>
               </div>
 
               <div className="flex-1 flex flex-col min-h-0">
