@@ -99,6 +99,9 @@ const ConfigTable = () => {
   const handleCreateNew = () => {
     router.push('/configs/new');
   };
+  const handleCreateNewManual = () => {
+    router.push('/configs/manual-new');
+  };
   const handleWorkflow = () => {
     router.push('/workflows');
   };
@@ -307,6 +310,10 @@ const ConfigTable = () => {
               <DropdownMenuItem onClick={handleCreateNew} className='p-4'>
                 <Globe className="mr-2 h-4 w-4" />
                 API Configuration
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleCreateNewManual} className='p-4'>
+                <Globe className="mr-2 h-4 w-4" />
+                API Configuration (Manual)
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleWorkflow} className='p-4'>
                 <GitBranch className="mr-2 h-4 w-4" />

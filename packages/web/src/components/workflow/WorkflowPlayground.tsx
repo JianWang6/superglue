@@ -125,25 +125,24 @@ function StepCard({ step, index, isHidden, onUpdate, onDelete, onToggleHidden }:
           </div>
         )}
       </CardHeader>
-        {isExpanded && (
-        <CardContent className="pt-0 space-y-4">
+        {isExpanded && (        <CardContent className="pt-0 space-y-4">
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label className="text-xs font-medium">Step ID</Label>
+            <div className="flex items-center gap-2">
+              <Label className="text-xs font-medium w-16 shrink-0">Step ID</Label>
               <Input
                 value={step.id || ''}
                 onChange={(e) => updateField('id', e.target.value)}
-                className="text-xs h-8"
+                className="text-xs h-8 flex-1"
                 placeholder="step1"
               />
             </div>
-            <div>
-              <Label className="text-xs font-medium">Execution Mode</Label>
+            <div className="flex items-center gap-2">
+              <Label className="text-xs font-medium w-20 shrink-0">Execution Mode</Label>
               <Select
                 value={step.executionMode || 'DIRECT'}
                 onValueChange={(value) => updateField('executionMode', value)}
               >
-                <SelectTrigger className="text-xs h-8">
+                <SelectTrigger className="text-xs h-8 flex-1">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -152,7 +151,7 @@ function StepCard({ step, index, isHidden, onUpdate, onDelete, onToggleHidden }:
                 </SelectContent>
               </Select>
             </div>
-          </div>          <div className={`space-y-3 p-3 rounded-lg ${step.apiConfig?.id ? 'bg-muted/50 border border-muted' : 'bg-muted/30'}`}>            <div className="flex items-center justify-between">
+          </div><div className={`space-y-3 p-3 rounded-lg ${step.apiConfig?.id ? 'bg-muted/50 border border-muted' : 'bg-muted/30'}`}>            <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                 <Label className="text-sm font-semibold">API Configuration</Label>
@@ -218,15 +217,15 @@ function StepCard({ step, index, isHidden, onUpdate, onDelete, onToggleHidden }:
               <div className="text-xs text-muted-foreground bg-muted/30 p-2 rounded border-l-2 border-blue-500">
                 此步骤使用了导入的 API 配置，字段已被锁定。点击"清除导入"按钮可重新编辑。
               </div>
-            )}<div className="grid grid-cols-3 gap-2">
-              <div>
-                <Label className="text-xs">Method</Label>
+            )}            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Label className="text-xs w-12 shrink-0">Method</Label>
                 <Select
                   value={step.apiConfig?.method || 'GET'}
                   onValueChange={(value) => updateField('apiConfig.method', value)}
                   disabled={!!step.apiConfig?.id}
                 >
-                  <SelectTrigger className="text-xs h-8">
+                  <SelectTrigger className="text-xs h-8 w-24">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -237,34 +236,29 @@ function StepCard({ step, index, isHidden, onUpdate, onDelete, onToggleHidden }:
                     <SelectItem value="PATCH">PATCH</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
-              <div className="col-span-2">
-                <Label className="text-xs">Host</Label>
+                <Label className="text-xs w-8 shrink-0 ml-4">URL</Label>
                 <Input
                   value={step.apiConfig?.urlHost || ''}
                   onChange={(e) => updateField('apiConfig.urlHost', e.target.value)}
-                  className="text-xs h-8"
+                  className="text-xs h-8 flex-1"
                   placeholder="https://api.example.com"
+                  disabled={!!step.apiConfig?.id}
+                />
+                <Input
+                  value={step.apiConfig?.urlPath || ''}
+                  onChange={(e) => updateField('apiConfig.urlPath', e.target.value)}
+                  className="text-xs h-8 flex-1"
+                  placeholder="/endpoint"
                   disabled={!!step.apiConfig?.id}
                 />
               </div>
             </div>
-            <div>
-              <Label className="text-xs">Path</Label>
-              <Input
-                value={step.apiConfig?.urlPath || ''}
-                onChange={(e) => updateField('apiConfig.urlPath', e.target.value)}
-                className="text-xs h-8"
-                placeholder="/endpoint"
-                disabled={!!step.apiConfig?.id}
-              />
-            </div>
-            <div>
-              <Label className="text-xs">Instruction</Label>
+            <div className="flex items-center gap-2">
+              <Label className="text-xs w-16 shrink-0">Instruction</Label>
               <Input
                 value={step.apiConfig?.instruction || ''}
                 onChange={(e) => updateField('apiConfig.instruction', e.target.value)}
-                className="text-xs h-8"
+                className="text-xs h-8 flex-1"
                 placeholder="Describe what this API call does"
                 disabled={!!step.apiConfig?.id}
               />
@@ -276,24 +270,23 @@ function StepCard({ step, index, isHidden, onUpdate, onDelete, onToggleHidden }:
               <div className="flex items-center gap-2">
                 <RotateCw className="w-4 h-4 text-amber-600" />
                 <Label className="text-sm font-semibold text-amber-800">Loop Configuration</Label>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label className="text-xs">Loop Selector</Label>
+              </div>              <div className="grid grid-cols-2 gap-3">
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs w-20 shrink-0">Loop Selector</Label>
                   <Input
                     value={step.loopSelector || ''}
                     onChange={(e) => updateField('loopSelector', e.target.value)}
-                    className="text-xs h-8"
+                    className="text-xs h-8 flex-1"
                     placeholder="e.g., getAllBreeds"
                   />
                 </div>
-                <div>
-                  <Label className="text-xs">Max Iterations</Label>
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs w-20 shrink-0">Max Iterations</Label>
                   <Input
                     type="number"
                     value={step.loopMaxIters || ''}
                     onChange={(e) => updateField('loopMaxIters', parseInt(e.target.value) || undefined)}
-                    className="text-xs h-8"
+                    className="text-xs h-8 flex-1"
                     placeholder="∞"
                   />
                 </div>
@@ -305,9 +298,8 @@ function StepCard({ step, index, isHidden, onUpdate, onDelete, onToggleHidden }:
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 bg-green-500 rounded-full"></div>
               <Label className="text-sm font-semibold text-green-800">Data Transformation</Label>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
+            </div>            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
                 <Label className="text-xs">Input Mapping (JSONata)</Label>
                 <Textarea
                   value={step.inputMapping || '$'}
@@ -316,7 +308,7 @@ function StepCard({ step, index, isHidden, onUpdate, onDelete, onToggleHidden }:
                   placeholder="$"
                 />
               </div>
-              <div>
+              <div className="space-y-1">
                 <Label className="text-xs">Response Mapping (JSONata)</Label>
                 <Textarea
                   value={step.responseMapping || '$'}
@@ -367,7 +359,8 @@ export default function WorkflowPlayground({ id }: { id?: string }) {
         apiKey: config.superglueApiKey,
       });
       const workflow = await superglueClient.getWorkflow(idToLoad);
-      if (!workflow) {        updateWorkflowId('');
+      if (!workflow) {        
+        updateWorkflowId('');
         setStepsText('');
         setFinalTransform('');
         setHiddenSteps(new Set()); // 重置隐藏状态
@@ -382,7 +375,7 @@ export default function WorkflowPlayground({ id }: { id?: string }) {
       setStepsText(JSON.stringify(cleanedSteps, null, 2));
       setFinalTransform(cleanedFinalTransform);
       setHiddenSteps(new Set()); // 重置隐藏状态
-
+      updateWorkflowId(cleanedWorkflow.id || ''); // Use cleaned ID, default to empty string
       toast({
         title: "Workflow loaded",
         description: `Loaded "${cleanedWorkflow.id}" successfully`,
@@ -393,7 +386,8 @@ export default function WorkflowPlayground({ id }: { id?: string }) {
         title: "Error loading workflow",
         description: error.message,
         variant: "destructive",
-      });      updateWorkflowId('');
+      });      
+      updateWorkflowId('');
       setStepsText('');
       setFinalTransform('');
       setHiddenSteps(new Set()); // 重置隐藏状态
