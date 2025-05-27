@@ -152,51 +152,79 @@ function StepCard({ step, index, isHidden, onUpdate, onDelete, onToggleHidden }:
                 </SelectContent>
               </Select>
             </div>
-          </div>
-
-          <div className="space-y-3 p-3 bg-muted/30 rounded-lg">
-            <div className="flex items-center justify-between">
+          </div>          <div className={`space-y-3 p-3 rounded-lg ${step.apiConfig?.id ? 'bg-muted/50 border border-muted' : 'bg-muted/30'}`}>            <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                 <Label className="text-sm font-semibold">API Configuration</Label>
+                {step.apiConfig?.id && (
+                  <Badge variant="secondary" className="text-xs">
+                    导入的配置 (ID: {step.apiConfig.id})
+                  </Badge>
+                )}
               </div>
-              <Select
-                onValueChange={(apiId) => {
-                  const selectedConfig = apiConfigs.find(ac => ac.id === apiId);
-                  if (selectedConfig) {
-                    onUpdate({ 
-                      ...step, 
-                      apiConfig: { 
-                        ...step.apiConfig, 
-                        // Keep existing id and instruction if user wants to override
-                        // id: selectedConfig.id, 
-                        urlHost: selectedConfig.urlHost, 
-                        urlPath: selectedConfig.urlPath, 
-                        method: selectedConfig.method, 
-                        // instruction: selectedConfig.instruction 
-                      } 
-                    });
-                  }
-                }}
-              >
-                <SelectTrigger className="text-xs h-8 w-[200px]">
-                  <SelectValue placeholder="Load from existing API Config" />
-                </SelectTrigger>
-                <SelectContent>
-                  {apiConfigs.map((api) => (
-                    <SelectItem key={api.id} value={api.id}>
-                      {api.id} ({api.method} {api.urlHost}{api.urlPath})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex items-center gap-2">
+                {step.apiConfig?.id && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      onUpdate({
+                        ...step,
+                        apiConfig: {
+                          ...step.apiConfig,
+                          id: undefined // Remove the id to allow editing
+                        }
+                      });
+                    }}
+                    className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground"
+                    title="清除导入的配置，允许手动编辑"
+                  >
+                    清除导入
+                  </Button>
+                )}
+                {!step.apiConfig?.id && (
+                  <Select
+                    onValueChange={(apiId) => {
+                      const selectedConfig = apiConfigs.find(ac => ac.id === apiId);
+                      if (selectedConfig) {
+                        onUpdate({ 
+                          ...step, 
+                          apiConfig: { 
+                            ...step.apiConfig, 
+                            id: selectedConfig.id, // Set the id when loading from existing config
+                            urlHost: selectedConfig.urlHost, 
+                            urlPath: selectedConfig.urlPath, 
+                            method: selectedConfig.method, 
+                            instruction: selectedConfig.instruction 
+                          } 
+                        });
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="text-xs h-8 w-[200px]">
+                      <SelectValue placeholder="Load from existing API Config" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {apiConfigs.map((api) => (
+                        <SelectItem key={api.id} value={api.id}>
+                          {api.id} ({api.method} {api.urlHost}{api.urlPath})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>                  </Select>
+                )}
+              </div>
             </div>
-            <div className="grid grid-cols-3 gap-2">
+            {step.apiConfig?.id && (
+              <div className="text-xs text-muted-foreground bg-muted/30 p-2 rounded border-l-2 border-blue-500">
+                此步骤使用了导入的 API 配置，字段已被锁定。点击"清除导入"按钮可重新编辑。
+              </div>
+            )}<div className="grid grid-cols-3 gap-2">
               <div>
                 <Label className="text-xs">Method</Label>
                 <Select
                   value={step.apiConfig?.method || 'GET'}
                   onValueChange={(value) => updateField('apiConfig.method', value)}
+                  disabled={!!step.apiConfig?.id}
                 >
                   <SelectTrigger className="text-xs h-8">
                     <SelectValue />
@@ -217,6 +245,7 @@ function StepCard({ step, index, isHidden, onUpdate, onDelete, onToggleHidden }:
                   onChange={(e) => updateField('apiConfig.urlHost', e.target.value)}
                   className="text-xs h-8"
                   placeholder="https://api.example.com"
+                  disabled={!!step.apiConfig?.id}
                 />
               </div>
             </div>
@@ -227,6 +256,7 @@ function StepCard({ step, index, isHidden, onUpdate, onDelete, onToggleHidden }:
                 onChange={(e) => updateField('apiConfig.urlPath', e.target.value)}
                 className="text-xs h-8"
                 placeholder="/endpoint"
+                disabled={!!step.apiConfig?.id}
               />
             </div>
             <div>
@@ -236,6 +266,7 @@ function StepCard({ step, index, isHidden, onUpdate, onDelete, onToggleHidden }:
                 onChange={(e) => updateField('apiConfig.instruction', e.target.value)}
                 className="text-xs h-8"
                 placeholder="Describe what this API call does"
+                disabled={!!step.apiConfig?.id}
               />
             </div>
           </div>
